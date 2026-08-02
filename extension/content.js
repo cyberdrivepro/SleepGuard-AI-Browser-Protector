@@ -20,7 +20,8 @@ window.addEventListener('message', (event) => {
       actionScope: data.actionScope || 'protected',
       protectedDomains: data.protectedDomains || [],
       protectAllOtherTabs: data.protectAllOtherTabs === true,
-      closeSleepGuardPage: data.closeSleepGuardPage === true
+      closeSleepGuardPage: data.closeSleepGuardPage === true,
+      selfCloseDelaySecs: typeof data.selfCloseDelaySecs === 'number' ? data.selfCloseDelaySecs : 2
     }, (response) => {
       if (chrome.runtime.lastError) {
         console.warn('[SleepGuard CS] Background error:', chrome.runtime.lastError.message);

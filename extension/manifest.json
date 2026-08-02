@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "SleepGuard AI — Browser Close Companion",
+  "name": "SleepGuard AI - Browser Close Companion",
   "version": "1.0.0",
   "description": "Companion Chrome Extension for SleepGuard AI Web App. Enables automatic tab and browser closure upon AI sleep detection.",
   "permissions": [

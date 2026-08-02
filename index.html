@@ -438,50 +438,144 @@
             </button>
           </div>
 
-          <!-- Protected Tabs Panel -->
+          <!-- Protected Tabs Panel — Dynamic Domain Engine -->
           <div class="card protected-tabs-panel" id="sectionTabs">
             <div class="card-title-bar">
               <div class="title-left"><i class="fa-solid fa-folder-open"></i> Protected Sites</div>
-              <button class="btn-link" id="manageTabsBtn">Manage Domains</button>
+              <div style="display:flex;gap:8px;">
+                <button class="btn-link" id="testProtectedBtn" style="color:var(--color-yellow);"><i class="fa-solid fa-flask"></i> Test</button>
+                <button class="btn-link" id="manageTabsBtn">Manage Domains</button>
+              </div>
             </div>
 
-            <div class="tabs-quick-list">
-              <div class="tab-item-row">
-                <div class="tab-meta"><i class="fa-brands fa-youtube icon-yt"></i> <span>YouTube</span></div>
-                <span class="tab-status-chip">Protected</span>
+            <div class="tabs-quick-list" id="quickDomainList">
+
+              <!-- YouTube -->
+              <div class="tab-item-row" data-domain="youtube.com">
+                <div class="tab-meta">
+                  <i class="fa-brands fa-youtube icon-yt"></i>
+                  <div class="tab-meta-text">
+                    <span class="tab-site-name">YouTube</span>
+                    <span class="tab-domain-label">youtube.com</span>
+                  </div>
+                </div>
+                <span class="tab-status-chip" id="chip-youtube">Protected</span>
                 <label class="switch-small">
                   <input type="checkbox" class="tab-domain-toggle" value="youtube.com" checked>
                   <span class="slider-small"></span>
                 </label>
               </div>
 
-              <div class="tab-item-row">
-                <div class="tab-meta"><i class="fa-brands fa-instagram icon-ig"></i> <span>Instagram</span></div>
-                <span class="tab-status-chip">Protected</span>
+              <!-- Instagram -->
+              <div class="tab-item-row" data-domain="instagram.com">
+                <div class="tab-meta">
+                  <i class="fa-brands fa-instagram icon-ig"></i>
+                  <div class="tab-meta-text">
+                    <span class="tab-site-name">Instagram</span>
+                    <span class="tab-domain-label">instagram.com</span>
+                  </div>
+                </div>
+                <span class="tab-status-chip" id="chip-instagram">Protected</span>
                 <label class="switch-small">
                   <input type="checkbox" class="tab-domain-toggle" value="instagram.com" checked>
                   <span class="slider-small"></span>
                 </label>
               </div>
 
-              <div class="tab-item-row">
-                <div class="tab-meta"><i class="fa-solid fa-film icon-nf"></i> <span>Netflix</span></div>
-                <span class="tab-status-chip">Protected</span>
+              <!-- Netflix -->
+              <div class="tab-item-row" data-domain="netflix.com">
+                <div class="tab-meta">
+                  <i class="fa-solid fa-film icon-nf"></i>
+                  <div class="tab-meta-text">
+                    <span class="tab-site-name">Netflix</span>
+                    <span class="tab-domain-label">netflix.com</span>
+                  </div>
+                </div>
+                <span class="tab-status-chip" id="chip-netflix">Protected</span>
                 <label class="switch-small">
                   <input type="checkbox" class="tab-domain-toggle" value="netflix.com" checked>
                   <span class="slider-small"></span>
                 </label>
               </div>
 
-              <div class="tab-item-row">
-                <div class="tab-meta"><i class="fa-solid fa-globe icon-all"></i> <span>All Other Tabs</span></div>
-                <span class="tab-status-chip">Protected</span>
+              <!-- Twitch -->
+              <div class="tab-item-row" data-domain="twitch.tv">
+                <div class="tab-meta">
+                  <i class="fa-brands fa-twitch icon-tw"></i>
+                  <div class="tab-meta-text">
+                    <span class="tab-site-name">Twitch</span>
+                    <span class="tab-domain-label">twitch.tv</span>
+                  </div>
+                </div>
+                <span class="tab-status-chip chip-ignored" id="chip-twitch">Ignored</span>
                 <label class="switch-small">
-                  <input type="checkbox" id="toggleAllOtherTabsSwitch" checked>
+                  <input type="checkbox" class="tab-domain-toggle" value="twitch.tv">
                   <span class="slider-small"></span>
                 </label>
               </div>
+
+              <!-- Facebook -->
+              <div class="tab-item-row" data-domain="facebook.com">
+                <div class="tab-meta">
+                  <i class="fa-brands fa-facebook icon-fb"></i>
+                  <div class="tab-meta-text">
+                    <span class="tab-site-name">Facebook</span>
+                    <span class="tab-domain-label">facebook.com</span>
+                  </div>
+                </div>
+                <span class="tab-status-chip chip-ignored" id="chip-facebook">Ignored</span>
+                <label class="switch-small">
+                  <input type="checkbox" class="tab-domain-toggle" value="facebook.com">
+                  <span class="slider-small"></span>
+                </label>
+              </div>
+
+              <!-- Twitter / X -->
+              <div class="tab-item-row" data-domain="x.com">
+                <div class="tab-meta">
+                  <i class="fa-brands fa-x-twitter icon-x"></i>
+                  <div class="tab-meta-text">
+                    <span class="tab-site-name">X (Twitter)</span>
+                    <span class="tab-domain-label">x.com</span>
+                  </div>
+                </div>
+                <span class="tab-status-chip chip-ignored" id="chip-xcom">Ignored</span>
+                <label class="switch-small">
+                  <input type="checkbox" class="tab-domain-toggle" value="x.com">
+                  <span class="slider-small"></span>
+                </label>
+              </div>
+
+              <!-- Divider -->
+              <div style="height:1px;background:var(--border-subtle);margin:4px 0;"></div>
+
+              <!-- All Other Tabs -->
+              <div class="tab-item-row" data-domain="__all_others__">
+                <div class="tab-meta">
+                  <i class="fa-solid fa-globe icon-all"></i>
+                  <div class="tab-meta-text">
+                    <span class="tab-site-name">All Other Tabs</span>
+                    <span class="tab-domain-label">Any unlisted website</span>
+                  </div>
+                </div>
+                <span class="tab-status-chip chip-ignored" id="chip-allothers">Ignored</span>
+                <label class="switch-small">
+                  <input type="checkbox" id="toggleAllOtherTabsSwitch">
+                  <span class="slider-small"></span>
+                </label>
+              </div>
+
             </div>
+
+            <!-- Quick Custom Domain Add -->
+            <div class="quick-add-domain-row">
+              <input type="text" id="quickCustomDomainInput" placeholder="Add custom domain... (e.g. reddit.com)" class="quick-domain-field">
+              <button class="btn-quick-add" id="quickAddDomainBtn"><i class="fa-solid fa-plus"></i></button>
+            </div>
+
+            <!-- Custom domain chips container -->
+            <div class="custom-chips-wrap" id="customChipsWrap"></div>
+
           </div>
 
         </section>
@@ -505,15 +599,18 @@
 
   </div>
 
-  <!-- Modal 1: Manage Protected Domains Modal -->
+  <!-- Modal 1: Manage Protected Websites (Advanced) -->
   <div class="modal-backdrop hidden" id="protectedTabsModal">
-    <div class="modal-card">
+    <div class="modal-card modal-advanced">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-list-check"></i> Manage Protected Websites</h3>
+        <h3><i class="fa-solid fa-shield-halved"></i> Manage Protected Websites</h3>
         <button class="modal-close" id="closeProtectedTabsBtn">&times;</button>
       </div>
       <div class="modal-body">
         <p class="modal-desc">Select which website tabs SleepGuard AI should close upon sleep or absence trigger.</p>
+
+        <!-- Domain Checkboxes -->
+        <div class="adv-section-label"><i class="fa-solid fa-globe"></i> Protected Domains</div>
         <div class="protected-list">
           <label class="domain-checkbox"><input type="checkbox" class="protected-domain-check" value="youtube.com" checked> <i class="fa-brands fa-youtube icon-yt"></i> YouTube</label>
           <label class="domain-checkbox"><input type="checkbox" class="protected-domain-check" value="instagram.com" checked> <i class="fa-brands fa-instagram icon-ig"></i> Instagram</label>
@@ -522,13 +619,101 @@
           <label class="domain-checkbox"><input type="checkbox" class="protected-domain-check" value="facebook.com" checked> <i class="fa-brands fa-facebook icon-fb"></i> Facebook</label>
           <label class="domain-checkbox"><input type="checkbox" class="protected-domain-check" value="x.com" checked> <i class="fa-brands fa-x-twitter icon-x"></i> Twitter / X</label>
         </div>
-        <div class="form-group">
-          <label for="customDomainInput">Custom Domain (Optional)</label>
-          <input type="text" id="customDomainInput" placeholder="e.g. reddit.com">
+
+        <div class="modal-divider"></div>
+
+        <!-- Custom Domains Multi-Add -->
+        <div class="adv-section-label"><i class="fa-solid fa-plus-circle"></i> Custom Domains</div>
+        <div class="custom-domains-wrap" id="customDomainsWrap">
+          <!-- Dynamic rows injected here -->
         </div>
+        <div class="custom-domain-add-row">
+          <input type="text" id="customDomainInput" placeholder="e.g. reddit.com or https://example.com" class="custom-domain-field">
+          <button class="btn-add-domain" id="addCustomDomainBtn"><i class="fa-solid fa-plus"></i> Add</button>
+        </div>
+
+        <div class="modal-divider"></div>
+
+        <!-- Advanced Protection Options -->
+        <div class="adv-section-label"><i class="fa-solid fa-sliders"></i> Advanced Protection</div>
+        <div class="adv-options-list">
+
+          <div class="adv-option-row">
+            <div class="adv-option-info">
+              <i class="fa-solid fa-display" style="color:var(--accent-cyan);"></i>
+              <div>
+                <strong>Close this SleepGuard page</strong>
+                <span>Close the monitoring tab itself after protection triggers</span>
+              </div>
+            </div>
+            <label class="switch-small">
+              <input type="checkbox" id="closeSleepGuardPageToggle" checked>
+              <span class="slider-small"></span>
+            </label>
+          </div>
+
+          <div class="adv-option-row">
+            <div class="adv-option-info">
+              <i class="fa-solid fa-window-restore" style="color:var(--color-yellow);"></i>
+              <div>
+                <strong>Close all browser windows</strong>
+                <span>Close entire browser windows containing protected tabs</span>
+              </div>
+            </div>
+            <label class="switch-small">
+              <input type="checkbox" id="closeAllWindowsToggle">
+              <span class="slider-small"></span>
+            </label>
+          </div>
+
+          <div class="adv-option-row">
+            <div class="adv-option-info">
+              <i class="fa-solid fa-bell" style="color:var(--color-red);"></i>
+              <div>
+                <strong>Play siren before closing</strong>
+                <span>Sound warning alarm before tab closure action</span>
+              </div>
+            </div>
+            <label class="switch-small">
+              <input type="checkbox" id="advPlaySirenToggle" checked>
+              <span class="slider-small"></span>
+            </label>
+          </div>
+
+          <div class="adv-option-row">
+            <div class="adv-option-info">
+              <i class="fa-solid fa-hourglass-half" style="color:var(--color-green);"></i>
+              <div>
+                <strong>Show 3-second warning countdown</strong>
+                <span>Display countdown overlay before executing closure</span>
+              </div>
+            </div>
+            <label class="switch-small">
+              <input type="checkbox" id="advShowCountdownToggle" checked>
+              <span class="slider-small"></span>
+            </label>
+          </div>
+
+        </div>
+
+        <!-- Protection Flow Diagram -->
+        <div class="modal-divider"></div>
+        <div class="flow-diagram">
+          <div class="flow-step flow-trigger"><i class="fa-solid fa-moon"></i> Sleep / Absence</div>
+          <div class="flow-arrow">▼</div>
+          <div class="flow-step flow-siren"><i class="fa-solid fa-bell"></i> Siren Warning</div>
+          <div class="flow-arrow">▼</div>
+          <div class="flow-step flow-close"><i class="fa-solid fa-xmark"></i> Close Protected Tabs</div>
+          <div class="flow-arrow">▼</div>
+          <div class="flow-step flow-self"><i class="fa-solid fa-display"></i> Close SleepGuard Page</div>
+          <div class="flow-arrow">▼</div>
+          <div class="flow-step flow-done"><i class="fa-solid fa-check"></i> Protection Complete</div>
+        </div>
+
       </div>
       <div class="modal-footer">
-        <button class="btn-primary" id="saveProtectedTabsBtn">Save Domains</button>
+        <button class="btn-secondary" id="closeProtectedTabsFooterBtn"><i class="fa-solid fa-xmark"></i> Cancel</button>
+        <button class="btn-primary" id="saveProtectedTabsBtn"><i class="fa-solid fa-floppy-disk"></i> Save Protection Settings</button>
       </div>
     </div>
   </div>

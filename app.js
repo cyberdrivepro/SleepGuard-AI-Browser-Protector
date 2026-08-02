@@ -160,16 +160,26 @@ document.addEventListener('DOMContentLoaded', () => {
     alarmSoundType: 'siren',
     alarmRepeatMode: 'last_3_sec', // 'last_3_sec', 'until_awake', 'until_closed'
 
-    // Protected Domains
-    protectedDomains: ['youtube.com', 'instagram.com', 'netflix.com', 'twitch.tv', 'facebook.com', 'x.com'],
+    // Protected Domains — only enabled ones are stored
+    protectedDomains: ['youtube.com', 'instagram.com', 'netflix.com'],
+    protectAllOtherTabs: false,
 
     // Emergency Fullscreen Overlay State
     emergencyActive: false,
     emergencyReason: 'SLEEP DETECTED',
 
     // Post-Action Settings
-    stopSirenAfterClose: true  // Automatically stop siren after tabs are closed
-  };
+    stopSirenAfterClose: true,  // Automatically stop siren after tabs are closed
+
+    // Advanced Protection Settings
+    closeSleepGuardPage: true,   // Close this SleepGuard monitoring tab after action
+    closeAllWindows: false,       // Close entire browser windows containing protected tabs
+    advPlaySiren: true,           // Play siren before closing
+    advShowCountdown: true,       // Show 3-second countdown overlay
+
+    // Custom Domains (user-added)
+    customDomains: []
+  }
 
   // Correct Standard MediaPipe FaceMesh Landmark Indices for EAR Calculation
   const LEFT_EYE = { corner1: 33, top1: 160, top2: 158, corner2: 133, bottom2: 153, bottom1: 144 };
@@ -1052,6 +1062,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   loadSavedTimerSettings();
 
+  // Load saved Advanced Protection settings from localStorage
+  function loadAdvancedProtectionSettings() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('sg_advProtection'));
+      if (!saved) return;
+      if (saved.closeSleepGuardPage !== undefined) state.closeSleepGuardPage = saved.closeSleepGuardPage;
+      if (saved.closeAllWindows !== undefined) state.closeAllWindows = saved.closeAllWindows;
+      if (saved.advPlaySiren !== undefined) state.advPlaySiren = saved.advPlaySiren;
+      if (saved.advShowCountdown !== undefined) state.advShowCountdown = saved.advShowCountdown;
+      if (Array.isArray(saved.customDomains)) state.customDomains = saved.customDomains;
+      // Sync toggles
+      const csp = document.getElementById('closeSleepGuardPageToggle');
+      const caw = document.getElementById('closeAllWindowsToggle');
+      const aps = document.getElementById('advPlaySirenToggle');
+      const asc = document.getElementById('advShowCountdownToggle');
+      if (csp) csp.checked = state.closeSleepGuardPage;
+      if (caw) caw.checked = state.closeAllWindows;
+      if (aps) aps.checked = state.advPlaySiren;
+      if (asc) asc.checked = state.advShowCountdown;
+    } catch(e) { /* ignore */ }
+  }
+  loadAdvancedProtectionSettings();
+
+
   // Custom Sleep Emergency Timer Handler (HH:MM:SS + localStorage)
   if (applySleepTimeBtn) {
     applySleepTimeBtn.addEventListener('click', () => {
@@ -1186,13 +1220,19 @@ document.addEventListener('DOMContentLoaded', () => {
     emergencyOverlay.classList.add('hidden');
 
     if (state.extensionConnected) {
+      // Build all protected domains (preset + custom)
+      const allDomains = [...state.protectedDomains, ...state.customDomains];
+
       window.postMessage({
         source: 'SLEEPGUARD_WEB_APP',
         type: 'TRIGGER_CLOSE',
-        actionScope: 'protected',
-        protectedDomains: state.protectedDomains
+        actionScope: state.closeAllWindows ? 'window' : 'protected',
+        protectedDomains: allDomains,
+        protectAllOtherTabs: state.protectAllOtherTabs,
+        closeSleepGuardPage: state.closeSleepGuardPage
       }, '*');
       addTimelineLog('Protected Tabs close command sent to Chrome Extension. 🛑');
+      if (state.closeSleepGuardPage) addTimelineLog('🔒 Self-Protection: SleepGuard monitoring tab will be closed.');
 
       // Fallback: if extension doesn't confirm within 3s, stop siren anyway
       if (state.stopSirenAfterClose) {
@@ -1213,7 +1253,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       state.emergencyActive = false;
       updateHeaderAndProtectionState();
-      alert(`[SleepGuard Pro Alert]\n\n${state.emergencyReason}\n\nProtected tabs closing signal sent! Load Chrome Companion Extension to automatically close background tabs.`);
+      alert(`[SleepGuard Pro Alert]\n\n${state.emergencyReason}\n\nProtected tabs closing signal sent! Load Chrome Companion Extension to automatically close background tabs.\n\n${state.closeSleepGuardPage ? 'Note: Install extension to also auto-close this SleepGuard tab.' : ''}`);
     }
   }
 
@@ -1229,15 +1269,320 @@ document.addEventListener('DOMContentLoaded', () => {
   manageTabsBtn.addEventListener('click', () => protectedTabsModal.classList.remove('hidden'));
   closeProtectedTabsBtn.addEventListener('click', () => protectedTabsModal.classList.add('hidden'));
 
+  // Footer cancel button
+  const closeProtectedTabsFooterBtn = document.getElementById('closeProtectedTabsFooterBtn');
+  if (closeProtectedTabsFooterBtn) closeProtectedTabsFooterBtn.addEventListener('click', () => protectedTabsModal.classList.add('hidden'));
+
+  // =========================================================================
+  // DOMAIN TOGGLE ENGINE — Core fix: inline panel checkboxes drive state
+  // =========================================================================
+
+  // Helper: normalize a URL string to just the hostname
+  function normalizeDomain(input) {
+    let val = input.trim();
+    if (!val) return '';
+    try {
+      return new URL(val.includes('://') ? val : 'https://' + val).hostname.toLowerCase().replace(/^www\./, '');
+    } catch(e) {
+      return val.toLowerCase().replace(/^www\./, '').replace(/\/.*$/, '');
+    }
+  }
+
+  // Helper: match a tab hostname against a domain pattern (exact + subdomain)
+  function domainMatchesTab(domain, hostname) {
+    const d = domain.toLowerCase();
+    const h = hostname.toLowerCase();
+    return h === d || h.endsWith('.' + d);
+  }
+
+  // Rebuild state.protectedDomains from current checkbox states
+  function rebuildProtectedDomains() {
+    const domains = [];
+    document.querySelectorAll('.tab-domain-toggle:checked').forEach(cb => {
+      domains.push(cb.value);
+    });
+    // Also include custom domains
+    state.customDomains.forEach(d => { if (!domains.includes(d)) domains.push(d); });
+    state.protectedDomains = domains;
+    state.protectAllOtherTabs = document.getElementById('toggleAllOtherTabsSwitch')?.checked || false;
+  }
+
+  // Update a single domain chip in the inline panel
+  function updateDomainChip(chipId, isProtected) {
+    const chip = document.getElementById(chipId);
+    if (!chip) return;
+    if (isProtected) {
+      chip.textContent = 'Protected';
+      chip.className = 'tab-status-chip';
+    } else {
+      chip.textContent = 'Ignored';
+      chip.className = 'tab-status-chip chip-ignored';
+    }
+  }
+
+  // Save current domain settings to localStorage + log
+  function saveAndSyncDomainSettings() {
+    rebuildProtectedDomains();
+    localStorage.setItem('sg_protectedDomains', JSON.stringify({
+      domains: state.protectedDomains,
+      protectAllOtherTabs: state.protectAllOtherTabs,
+      customDomains: state.customDomains
+    }));
+    const total = state.protectedDomains.length;
+    addTimelineLog(`✅ Protected Sites: ${total} domain(s) active${state.protectAllOtherTabs ? ' + All Other Tabs' : ''}.`);
+  }
+
+  // Wire ALL inline panel domain toggle checkboxes
+  document.querySelectorAll('.tab-domain-toggle').forEach(cb => {
+    const domain = cb.value;
+    const chipMap = {
+      'youtube.com': 'chip-youtube',
+      'instagram.com': 'chip-instagram',
+      'netflix.com': 'chip-netflix',
+      'twitch.tv': 'chip-twitch',
+      'facebook.com': 'chip-facebook',
+      'x.com': 'chip-xcom'
+    };
+    // Set initial chip state from checkbox
+    updateDomainChip(chipMap[domain], cb.checked);
+
+    cb.addEventListener('change', () => {
+      updateDomainChip(chipMap[domain], cb.checked);
+      saveAndSyncDomainSettings();
+      addTimelineLog(`${cb.checked ? '✅' : '❌'} ${domain} ${cb.checked ? 'added to' : 'removed from'} protection list.`);
+    });
+  });
+
+  // All Other Tabs toggle
+  const toggleAllOtherTabsSwitch = document.getElementById('toggleAllOtherTabsSwitch');
+  if (toggleAllOtherTabsSwitch) {
+    const allOthersChip = document.getElementById('chip-allothers');
+    toggleAllOtherTabsSwitch.addEventListener('change', () => {
+      const on = toggleAllOtherTabsSwitch.checked;
+      if (allOthersChip) {
+        allOthersChip.textContent = on ? 'Protected' : 'Ignored';
+        allOthersChip.className = on ? 'tab-status-chip' : 'tab-status-chip chip-ignored';
+      }
+      saveAndSyncDomainSettings();
+      addTimelineLog(`All Other Tabs protection: ${on ? 'ON ✅' : 'OFF'}`);
+    });
+  }
+
+  // =========================================================================
+  // QUICK CUSTOM DOMAIN ADD (Inline Panel)
+  // =========================================================================
+  const quickCustomDomainInput = document.getElementById('quickCustomDomainInput');
+  const quickAddDomainBtn = document.getElementById('quickAddDomainBtn');
+  const customChipsWrap = document.getElementById('customChipsWrap');
+
+  function addCustomChip(domain) {
+    if (!domain || state.customDomains.includes(domain)) return;
+    state.customDomains.push(domain);
+    const chip = document.createElement('div');
+    chip.className = 'quick-chip';
+    chip.innerHTML = `<i class="fa-solid fa-link"></i> <span>${domain}</span> <button class="chip-remove" title="Remove">&times;</button>`;
+    chip.querySelector('.chip-remove').addEventListener('click', () => {
+      state.customDomains = state.customDomains.filter(d => d !== domain);
+      chip.remove();
+      saveAndSyncDomainSettings();
+      addTimelineLog(`❌ Custom domain removed: ${domain}`);
+    });
+    customChipsWrap.appendChild(chip);
+    saveAndSyncDomainSettings();
+    addTimelineLog(`➕ Custom domain added: ${domain}`);
+  }
+
+  if (quickAddDomainBtn) {
+    quickAddDomainBtn.addEventListener('click', () => {
+      const val = normalizeDomain(quickCustomDomainInput.value);
+      if (val) { addCustomChip(val); quickCustomDomainInput.value = ''; }
+    });
+    quickCustomDomainInput?.addEventListener('keydown', e => { if (e.key === 'Enter') quickAddDomainBtn.click(); });
+  }
+
+  // =========================================================================
+  // TEST PROTECTED SITES BUTTON
+  // =========================================================================
+  const testProtectedBtn = document.getElementById('testProtectedBtn');
+  if (testProtectedBtn) {
+    testProtectedBtn.addEventListener('click', () => {
+      rebuildProtectedDomains();
+      const domains = state.protectedDomains;
+      const allOthers = state.protectAllOtherTabs;
+
+      let msg = `🛡️ Protected Sites — DRY RUN TEST\n\nActive domains (${domains.length}):\n`;
+      if (domains.length === 0 && !allOthers) {
+        msg += '  (none selected)\n';
+      } else {
+        domains.forEach(d => msg += `  ✔ ${d}\n`);
+        if (allOthers) msg += '  ✔ [All Other Unlisted Tabs]\n';
+      }
+      msg += '\nIf protection triggers NOW, only these domain tabs would be closed.';
+      msg += '\n(No tabs were actually closed — this is a dry run)';
+      alert(msg);
+      addTimelineLog(`🧪 Test run: ${domains.length} domain(s) would be targeted${allOthers ? ' + All Others' : ''}.`);
+    });
+  }
+
+  // =========================================================================
+  // LOAD SAVED DOMAIN SETTINGS FROM LOCALSTORAGE
+  // =========================================================================
+  function loadSavedDomainSettings() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('sg_protectedDomains'));
+      if (!saved) return;
+
+      // Restore preset toggles
+      if (Array.isArray(saved.domains)) {
+        document.querySelectorAll('.tab-domain-toggle').forEach(cb => {
+          const isOn = saved.domains.includes(cb.value);
+          cb.checked = isOn;
+          const chipMap = {
+            'youtube.com': 'chip-youtube',
+            'instagram.com': 'chip-instagram',
+            'netflix.com': 'chip-netflix',
+            'twitch.tv': 'chip-twitch',
+            'facebook.com': 'chip-facebook',
+            'x.com': 'chip-xcom'
+          };
+          updateDomainChip(chipMap[cb.value], isOn);
+        });
+        state.protectedDomains = saved.domains;
+      }
+
+      // Restore All Other Tabs
+      if (saved.protectAllOtherTabs !== undefined && toggleAllOtherTabsSwitch) {
+        toggleAllOtherTabsSwitch.checked = saved.protectAllOtherTabs;
+        state.protectAllOtherTabs = saved.protectAllOtherTabs;
+        const chip = document.getElementById('chip-allothers');
+        if (chip) {
+          chip.textContent = saved.protectAllOtherTabs ? 'Protected' : 'Ignored';
+          chip.className = saved.protectAllOtherTabs ? 'tab-status-chip' : 'tab-status-chip chip-ignored';
+        }
+      }
+
+      // Restore custom domains
+      if (Array.isArray(saved.customDomains)) {
+        saved.customDomains.forEach(d => addCustomChip(d));
+      }
+    } catch(e) { /* ignore */ }
+  }
+  loadSavedDomainSettings();
+
+  // =========================================================================
+  // ADVANCED MODAL: Add custom domains & toggles (synced)
+  // =========================================================================
+  // Add Custom Domain Button (Modal)
+  const addCustomDomainBtn = document.getElementById('addCustomDomainBtn');
+  const customDomainsWrap = document.getElementById('customDomainsWrap');
+
+  function renderModalCustomDomainRow(domain) {
+    const row = document.createElement('div');
+    row.className = 'custom-domain-row';
+    row.innerHTML = `
+      <span class="custom-domain-pill"><i class="fa-solid fa-link"></i> ${domain}</span>
+      <button class="btn-remove-domain" title="Remove"><i class="fa-solid fa-trash"></i></button>
+    `;
+    row.querySelector('.btn-remove-domain').addEventListener('click', () => {
+      state.customDomains = state.customDomains.filter(d => d !== domain);
+      row.remove();
+      // Also remove from quick chips
+      if (customChipsWrap) {
+        [...customChipsWrap.querySelectorAll('.quick-chip')].forEach(c => {
+          if (c.querySelector('span')?.textContent === domain) c.remove();
+        });
+      }
+      saveAndSyncDomainSettings();
+      addTimelineLog(`Custom domain removed: ${domain}`);
+    });
+    if (customDomainsWrap) customDomainsWrap.appendChild(row);
+  }
+
+  if (addCustomDomainBtn) {
+    addCustomDomainBtn.addEventListener('click', () => {
+      const val = normalizeDomain(customDomainInput?.value || '');
+      if (!val) return;
+      if (!state.customDomains.includes(val)) {
+        addCustomChip(val);
+        renderModalCustomDomainRow(val);
+      }
+      if (customDomainInput) customDomainInput.value = '';
+    });
+    customDomainInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') addCustomDomainBtn.click(); });
+  }
+
+  // Advanced Protection Toggles
+  const closeSleepGuardPageToggle = document.getElementById('closeSleepGuardPageToggle');
+  const closeAllWindowsToggle = document.getElementById('closeAllWindowsToggle');
+  const advPlaySirenToggle = document.getElementById('advPlaySirenToggle');
+  const advShowCountdownToggle = document.getElementById('advShowCountdownToggle');
+
+  if (closeSleepGuardPageToggle) {
+    closeSleepGuardPageToggle.addEventListener('change', (e) => {
+      state.closeSleepGuardPage = e.target.checked;
+      addTimelineLog(`Self-Protection (Close SleepGuard Tab): ${state.closeSleepGuardPage ? 'ON ✅' : 'OFF'}`);
+    });
+  }
+  if (closeAllWindowsToggle) {
+    closeAllWindowsToggle.addEventListener('change', (e) => {
+      state.closeAllWindows = e.target.checked;
+      addTimelineLog(`Close All Windows Mode: ${state.closeAllWindows ? 'ON' : 'OFF'}`);
+    });
+  }
+  if (advPlaySirenToggle) {
+    advPlaySirenToggle.addEventListener('change', (e) => {
+      state.advPlaySiren = e.target.checked;
+      addTimelineLog(`Play Siren Before Close: ${state.advPlaySiren ? 'ON' : 'OFF'}`);
+    });
+  }
+  if (advShowCountdownToggle) {
+    advShowCountdownToggle.addEventListener('change', (e) => {
+      state.advShowCountdown = e.target.checked;
+      addTimelineLog(`Show 3s Countdown: ${state.advShowCountdown ? 'ON' : 'OFF'}`);
+    });
+  }
+
   saveProtectedTabsBtn.addEventListener('click', () => {
+    // Sync modal domain checkboxes to state
     const checked = [];
     document.querySelectorAll('.protected-domain-check:checked').forEach(c => checked.push(c.value));
-    const custom = customDomainInput.value.trim();
-    if (custom) checked.push(custom);
-
+    // Merge with custom domains
+    state.customDomains.forEach(d => { if (!checked.includes(d)) checked.push(d); });
     state.protectedDomains = checked;
+
+    // Also sync inline toggles to match modal checkboxes
+    document.querySelectorAll('.tab-domain-toggle').forEach(cb => {
+      cb.checked = checked.includes(cb.value);
+      const chipMap = {
+        'youtube.com': 'chip-youtube', 'instagram.com': 'chip-instagram',
+        'netflix.com': 'chip-netflix', 'twitch.tv': 'chip-twitch',
+        'facebook.com': 'chip-facebook', 'x.com': 'chip-xcom'
+      };
+      updateDomainChip(chipMap[cb.value], cb.checked);
+    });
+
+    state.closeSleepGuardPage = closeSleepGuardPageToggle ? closeSleepGuardPageToggle.checked : true;
+    state.closeAllWindows = closeAllWindowsToggle ? closeAllWindowsToggle.checked : false;
+    state.advPlaySiren = advPlaySirenToggle ? advPlaySirenToggle.checked : true;
+    state.advShowCountdown = advShowCountdownToggle ? advShowCountdownToggle.checked : true;
+
+    // Save everything
+    localStorage.setItem('sg_protectedDomains', JSON.stringify({
+      domains: state.protectedDomains,
+      protectAllOtherTabs: state.protectAllOtherTabs,
+      customDomains: state.customDomains
+    }));
+    localStorage.setItem('sg_advProtection', JSON.stringify({
+      closeSleepGuardPage: state.closeSleepGuardPage,
+      closeAllWindows: state.closeAllWindows,
+      advPlaySiren: state.advPlaySiren,
+      advShowCountdown: state.advShowCountdown,
+      customDomains: state.customDomains
+    }));
+
     protectedTabsModal.classList.add('hidden');
-    addTimelineLog(`Protected Domains updated (${checked.length} active domain filters).`);
+    const totalDomains = state.protectedDomains.length;
+    addTimelineLog(`✅ Protection Settings saved — ${totalDomains} domain(s)${state.closeSleepGuardPage ? ', Self-Close ON' : ''}${state.closeAllWindows ? ', Window-Close ON' : ''}.`);
   });
 
   headerLogsBtn.addEventListener('click', () => logsModal.classList.remove('hidden'));

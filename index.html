@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SleepGuard AI — Neural Vision Guard & Parent Shield</title>
+  <meta name="description" content="100% Client-Side GitHub Pages Compatible AI Vision & Inactivity Guard featuring 12-Factor Sleep Confidence, Face Enrollment, and Companion Extension.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- MediaPipe CDN Suite -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <!-- App Wrapper -->
+  <div class="app-layout">
+    
+    <!-- Header Navigation Bar -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-badge">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="brand-text">
+          <h1>SleepGuard <span class="tag-v5">v5</span></h1>
+          <p>Client-Side Neural Guard & Parent Shield</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="pill-badge" id="extStatusBadge">
+          <span class="dot red" id="extDot"></span>
+          <i class="fa-solid fa-puzzle-piece"></i>
+          <span id="extStatusText">Extension Disconnected</span>
+        </div>
+
+        <div class="pill-badge" id="guardianStatusBadge">
+          <span class="dot green" id="guardianDot"></span>
+          <i class="fa-solid fa-user-shield"></i>
+          <span id="guardianStatusText">Guardian Shield Active</span>
+        </div>
+
+        <button class="btn-ghost" id="enrollFaceBtn" title="Enroll Guardian Target Profile">
+          <i class="fa-solid fa-user-plus"></i> Enroll Face
+        </button>
+
+        <button class="btn-icon" id="openSettingsBtn" title="Settings">
+          <i class="fa-solid fa-sliders"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <main class="main-content">
+      
+      <!-- Left Panel: Live AI Vision HUD Stream -->
+      <section class="glass-card vision-card">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-camera"></i> Live Vision Stream
+          </div>
+          <div class="chip-group">
+            <button class="chip active" id="toggleMeshBtn">Face Mesh</button>
+            <button class="chip active" id="togglePoseBtn">Body Pose</button>
+            <button class="chip active" id="toggleHandsBtn">Hands</button>
+          </div>
+        </div>
+
+        <!-- Video Viewport -->
+        <div class="viewport-box">
+          <video id="webcam" playsinline autoplay muted></video>
+          <canvas id="hudCanvas"></canvas>
+
+          <!-- Tracking Status Overlay Badges -->
+          <div class="viewport-overlay">
+            <div class="status-tags">
+              <div class="tag-pill" id="tagFace"><i class="fa-solid fa-face-smile"></i> <span>Face: Searching</span></div>
+              <div class="tag-pill" id="tagMouth"><i class="fa-solid fa-lips"></i> <span>Mouth: Normal</span></div>
+              <div class="tag-pill" id="tagPose"><i class="fa-solid fa-person"></i> <span>Pose: Active</span></div>
+              <div class="tag-pill" id="tagHand"><i class="fa-solid fa-hand"></i> <span>Hands: Tracking</span></div>
+            </div>
+
+            <!-- Initial Launch Prompt -->
+            <div class="launch-prompt" id="camPrompt">
+              <i class="fa-solid fa-shield-cat prompt-icon"></i>
+              <h3>Initialize Neural Monitor</h3>
+              <p>Everything runs 100% locally in your browser. No camera data ever leaves your device.</p>
+              <button class="btn-primary" id="startCamBtn">
+                <i class="fa-solid fa-power-off"></i> Start AI Vision
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom Telemetry HUD Bar -->
+          <div class="hud-bar">
+            <div class="hud-item">
+              <span class="hud-lbl">SLEEP CONFIDENCE</span>
+              <span class="hud-val" id="hudSleepConf">0.0%</span>
+            </div>
+            <div class="hud-item">
+              <span class="hud-lbl">EXPRESSION</span>
+              <span class="hud-val" id="hudExpression">Neutral 😊</span>
+            </div>
+            <div class="hud-item">
+              <span class="hud-lbl">BLINK RATE</span>
+              <span class="hud-val"><strong id="hudBlinkRate">0</strong> /min</span>
+            </div>
+            <div class="hud-item">
+              <span class="hud-lbl">EAR / MAR</span>
+              <span class="hud-val"><span id="hudEarVal">0.00</span> / <span id="hudMarVal">0.00</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telemetry Meters Dual Row -->
+        <div class="meters-grid">
+          <div class="meter-card">
+            <div class="meter-header">
+              <span>Eye Aspect Ratio (EAR)</span>
+              <span id="earValText" class="mono">0.00</span>
+            </div>
+            <div class="track-bg">
+              <div class="track-fill cyan" id="earMeterFill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div class="meter-card">
+            <div class="meter-header">
+              <span>Mouth Open Ratio (MAR / Yawn)</span>
+              <span id="marValText" class="mono">0.00</span>
+            </div>
+            <div class="track-bg">
+              <div class="track-fill purple" id="marMeterFill" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Neural Activity Log -->
+        <div class="log-card">
+          <div class="log-header">
+            <span><i class="fa-solid fa-list"></i> Activity Log</span>
+            <span class="log-clear" id="clearLogBtn">Clear</span>
+          </div>
+          <div class="log-feed" id="timelineList">
+            <div class="log-entry"><span class="log-time">00:00</span> <span class="log-msg">SleepGuard AI v5 initialized (GitHub Pages Ready).</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Panel: Telemetry Analytics & Guardian Shield -->
+      <section class="glass-card control-card">
+        
+        <!-- Sleep Confidence Card -->
+        <div class="status-box safe" id="riskCard">
+          <div class="ring-wrap">
+            <svg class="ring-svg" viewBox="0 0 160 160">
+              <circle class="ring-bg" cx="80" cy="80" r="70" />
+              <circle class="ring-fill" id="sleepConfCircle" cx="80" cy="80" r="70" />
+            </svg>
+            <div class="ring-center">
+              <span class="ring-lbl">SLEEP CONF</span>
+              <span class="ring-val" id="sleepConfVal">0%</span>
+              <span class="ring-status" id="sleepConfTag">AWAKE</span>
+            </div>
+          </div>
+
+          <div class="status-info">
+            <h3 id="statusHeading">State: Alert & Active 🟢</h3>
+            <p id="statusDesc">Body posture, hand movements, and eye openness verified active. Background worker monitoring continuously.</p>
+          </div>
+        </div>
+
+        <!-- Guardian Mode Parent Intrusion Shield -->
+        <div class="guardian-card">
+          <div class="guardian-header">
+            <div class="guardian-meta">
+              <i class="fa-solid fa-user-shield guardian-icon"></i>
+              <div>
+                <strong>Guardian Shield (Parent / Intruder)</strong>
+                <p>Auto-close protected tabs if a 2nd person is detected</p>
+              </div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="guardianSwitch" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="guardian-row">
+            <span>Enrolled Profile:</span>
+            <span class="status-chip" id="enrolledStatusPill">Not Enrolled</span>
+          </div>
+
+          <div class="guardian-row">
+            <span>Action on Intrusion:</span>
+            <select id="guardianActionSelect">
+              <option value="close_all">Close All Protected Tabs</option>
+              <option value="close_tab">Close Current Tab Only</option>
+              <option value="window">Close Window</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Inactivity Timer Card -->
+        <div class="timer-card">
+          <div class="timer-meta">
+            <span><i class="fa-solid fa-stopwatch"></i> Inactivity Auto-Close Timer</span>
+            <span class="mode-pill">BG Worker 🟢</span>
+          </div>
+
+          <div class="timer-clock-wrap">
+            <span class="clock-display" id="timerClock">03:00</span>
+            <span class="clock-sub" id="timerSub">Monitoring Presence</span>
+          </div>
+
+          <div class="preset-group">
+            <button class="btn-preset" data-mins="2">2 min</button>
+            <button class="btn-preset active" data-mins="3">3 min</button>
+            <button class="btn-preset" data-mins="4">4 min</button>
+            <button class="btn-preset" id="customTimerBtn"><i class="fa-solid fa-pen"></i> Custom</button>
+          </div>
+        </div>
+
+        <!-- Controls & Action Buttons -->
+        <div class="action-list">
+          <div class="toggle-item">
+            <div>
+              <strong>Auto Browser Closure</strong>
+              <p>Close browser tab when sleep confidence reaches 95%</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="autoCloseSwitch" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="btn-grid">
+            <button class="btn-secondary" id="testIntruderBtn"><i class="fa-solid fa-user-secret"></i> Test Guardian Shield</button>
+            <button class="btn-secondary" id="testCloseBtn"><i class="fa-solid fa-bolt"></i> Test Close Action</button>
+          </div>
+        </div>
+
+        <!-- Extension Link Notice -->
+        <div class="notice-card" id="extBanner">
+          <i class="fa-solid fa-puzzle-piece notice-icon"></i>
+          <div>
+            <h4>Companion Extension Recommended</h4>
+            <p>Load the Chrome Extension to allow SleepGuard to close tabs automatically.</p>
+          </div>
+          <button class="btn-small" id="extGuideBtn">Guide <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Footer Bar -->
+    <footer class="app-footer">
+      <p>SleepGuard AI v5 — 100% Client-Side Privacy | GitHub Pages Compatible</p>
+      <div class="footer-links">
+        <a href="#" id="openGuideLink"><i class="fa-solid fa-book"></i> Extension Guide</a>
+        <a href="https://github.com" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> GitHub Repository</a>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modal 1: Face Profile Enrollment Modal -->
+  <div class="modal-backdrop hidden" id="enrollModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-plus"></i> Enroll Target Face Profile</h3>
+        <button class="modal-close" id="closeEnrollBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Position the target person in front of the camera and click <strong>"Capture Snapshot"</strong> to store their 3D feature profile locally in your browser.</p>
+        
+        <div class="snapshot-box">
+          <canvas id="snapshotCanvas" width="320" height="240"></canvas>
+        </div>
+
+        <div class="form-group">
+          <label for="targetProfileName">Profile Label</label>
+          <input type="text" id="targetProfileName" value="Target Person (Parent)" placeholder="e.g. Parent / Stranger">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="captureSnapshotBtn"><i class="fa-solid fa-camera"></i> Capture & Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Fullscreen Emergency Countdown Overlay -->
+  <div class="fullscreen-overlay hidden" id="emergencyOverlay">
+    <div class="emergency-card">
+      <i class="fa-solid fa-triangle-exclamation emergency-icon"></i>
+      <h2 id="emergencyTitle">SLEEP DETECTED!</h2>
+      <p id="emergencySubtitle">Closing active browser tab to protect your session in:</p>
+      <div class="countdown-display" id="emergencyCountdownNum">5</div>
+      <p class="emergency-help">Move your mouse or press any key to CANCEL</p>
+      <button class="btn-danger" id="cancelEmergencyBtn">
+        <i class="fa-solid fa-xmark"></i> Cancel Auto-Close
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal 3: Settings Modal -->
+  <div class="modal-backdrop hidden" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-sliders"></i> System Settings</h3>
+        <button class="modal-close" id="closeSettingsBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <div class="form-group">
+          <label for="drowsinessThreshold">
+            EAR Eye Closure Threshold (<span id="thresholdValDisplay">0.20</span>)
+            <p class="help-text">Values below threshold count towards eye closure duration</p>
+          </label>
+          <input type="range" id="drowsinessThreshold" min="0.14" max="0.28" step="0.01" value="0.20">
+        </div>
+
+        <div class="form-group">
+          <label for="yawnThreshold">
+            MAR Yawn Sensitivity (<span id="yawnValDisplay">0.60</span>)
+            <p class="help-text">Values above threshold count towards yawning</p>
+          </label>
+          <input type="range" id="yawnThreshold" min="0.45" max="0.75" step="0.05" value="0.60">
+        </div>
+
+        <div class="form-group">
+          <label for="closeActionType">
+            Browser Closure Scope
+            <p class="help-text">Action executed when countdown timer or intrusion triggers</p>
+          </label>
+          <select id="closeActionType">
+            <option value="tab">Close Current Active Tab</option>
+            <option value="window">Close Entire Browser Window</option>
+          </select>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="saveSettingsBtn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Extension Installation Guide -->
+  <div class="modal-backdrop hidden" id="guideModal">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-puzzle-piece"></i> Chrome Extension Guide</h3>
+        <button class="modal-close" id="closeGuideBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="steps-grid">
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div>
+              <h4>Locate Extension Directory</h4>
+              <p>Find the <code>extension/</code> folder included in this project repository.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div>
+              <h4>Open Chrome Extensions</h4>
+              <p>Open <code>chrome://extensions</code> in browser & enable <strong>Developer mode</strong> (top-right).</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div>
+              <h4>Load Unpacked</h4>
+              <p>Click <strong>"Load unpacked"</strong> at top-left and select the <code>extension</code> folder.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">4</div>
+            <div>
+              <h4>Link Complete</h4>
+              <p>Refresh this page. Badge will turn <span class="text-green">🟢 Extension Connected</span>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="understandGuideBtn">Got It</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Logic Script -->
+  <script src="app.js"></script>
+</body>
+</html>

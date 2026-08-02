@@ -544,22 +544,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Extension Bridge Check ---
+  // --- Extension Bridge Check (Real Heartbeat Ping-Pong) ---
+  let lastExtensionPongTime = 0;
+
   function checkExtensionBridge() {
     window.postMessage({ source: 'SLEEPGUARD_WEB_APP', type: 'SLEEPGUARD_PING' }, '*');
+
+    const now = Date.now();
+    if (lastExtensionPongTime > 0 && (now - lastExtensionPongTime) > 6000) {
+      if (state.extensionConnected) {
+        state.extensionConnected = false;
+        if (extensionStatusBanner) {
+          extensionStatusBanner.textContent = 'Extension: Not Connected 🔴 (Refresh F5)';
+          extensionStatusBanner.style.color = 'var(--color-red)';
+        }
+        addTimelineLog('🔴 Extension Heartbeat Lost — Please refresh page (F5) after loading extension.');
+      }
+    }
   }
 
   window.addEventListener('message', (evt) => {
     if (evt.data && evt.data.type === 'SLEEPGUARD_PONG') {
+      lastExtensionPongTime = Date.now();
       if (!state.extensionConnected) {
         state.extensionConnected = true;
         if (extensionStatusBanner) {
           extensionStatusBanner.textContent = 'Extension: Connected 🟢';
-          extensionStatusBanner.className = 'text-green';
+          extensionStatusBanner.style.color = 'var(--color-green)';
         }
         addTimelineLog('Chrome Extension Connected 🟢');
       }
     }
+
 
     // Extension signals tabs have been closed -> auto-stop siren
     if (evt.data && evt.data.type === 'SLEEPGUARD_TABS_CLOSED') {
@@ -1422,8 +1438,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
-  // TEST PROTECTED SITES BUTTON
+  // FORCE CLOSE TABS NOW BUTTON (Instant Manual Trigger)
   // =========================================================================
+  const forceCloseTabsBtn = document.getElementById('forceCloseTabsBtn');
+  if (forceCloseTabsBtn) {
+    forceCloseTabsBtn.addEventListener('click', () => {
+      addTimelineLog('⚡ Manual "Close Tabs Now" triggered by user.');
+      rebuildProtectedDomains();
+      executeBrowserCloseAction();
+    });
+  }
+
+  // =========================================================================
+  // TEST PROTECTED SITES BUTTON (Dry Run)
+  // =========================================================================
+
   const testProtectedBtn = document.getElementById('testProtectedBtn');
   if (testProtectedBtn) {
     testProtectedBtn.addEventListener('click', () => {

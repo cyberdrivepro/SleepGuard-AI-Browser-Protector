@@ -21,7 +21,8 @@ window.addEventListener('message', (event) => {
       protectedDomains: data.protectedDomains || [],
       protectAllOtherTabs: data.protectAllOtherTabs === true,
       closeSleepGuardPage: data.closeSleepGuardPage === true,
-      selfCloseDelaySecs: typeof data.selfCloseDelaySecs === 'number' ? data.selfCloseDelaySecs : 2
+      selfCloseDelaySecs: typeof data.selfCloseDelaySecs === 'number' ? data.selfCloseDelaySecs : 2,
+      callerUrl: window.location.href
     }, (response) => {
       if (chrome.runtime.lastError) {
         console.warn('[SleepGuard CS] Background error:', chrome.runtime.lastError.message);

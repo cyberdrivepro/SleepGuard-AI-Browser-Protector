@@ -1,0 +1,17 @@
+{
+  "name": "sleepguard-pro",
+  "version": "11.0.0",
+  "description": "SleepGuard Pro v11 — AI Sleep Protection & Browser Tab Guardian",
+  "main": "app.js",
+  "scripts": {
+    "build-extension": "node scripts/build-extension.js"
+  },
+  "keywords": [
+    "sleep-detector",
+    "mediapipe",
+    "chrome-extension",
+    "tab-guardian"
+  ],
+  "author": "CyberDrivePro",
+  "license": "MIT"
+}

@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SleepGuard Pro v11 — AI Sleep Protection & Tab Guardian</title>
+  <meta name="description" content="SleepGuard Pro v11 — Production AI Sleep Protection featuring Dual-Timer Engine, MediaPipe Face Mesh Eye Tracking, Web Audio Siren Alarms, and Manifest V3 Extension Tab Guardian.">
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- MediaPipe Face Mesh CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <!-- Full App Shell Layout -->
+  <div class="app-shell">
+    
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon-box">
+          <i class="fa-solid fa-brain"></i>
+        </div>
+        <div class="brand-name-wrap">
+          <h2>SleepGuard <span class="v10-badge">Pro v11</span></h2>
+          <p>AI Sleep Protection</p>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#sectionDashboard" class="nav-item active" id="navDashboard"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="#sectionDashboard" class="nav-item" id="navProtection"><i class="fa-solid fa-shield-halved"></i> <span>Protection</span></a>
+        <a href="#sectionTimer" class="nav-item" id="navTimer"><i class="fa-solid fa-stopwatch"></i> <span>Timers</span></a>
+        <a href="#sectionSound" class="nav-item" id="navSound"><i class="fa-solid fa-volume-high"></i> <span>Alarm & Siren</span></a>
+        <a href="#sectionTabs" class="nav-item" id="navTabs"><i class="fa-solid fa-globe"></i> <span>Protected Sites</span></a>
+        <a href="#" class="nav-item" id="navLog"><i class="fa-solid fa-list-check"></i> <span>Activity Logs</span></a>
+        <a href="#" class="nav-item" id="navSettings"><i class="fa-solid fa-gear"></i> <span>Settings</span></a>
+        <a href="#" class="nav-item" id="navAbout"><i class="fa-solid fa-circle-info"></i> <span>About</span></a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="secure-badge-box">
+          <i class="fa-solid fa-shield-check text-green"></i>
+          <div>
+            <strong>System Secure</strong>
+            <p>Detection Ready</p>
+          </div>
+        </div>
+        <div class="live-clock-box">
+          <i class="fa-solid fa-clock"></i>
+          <div>
+            <strong id="sidebarClock">--:--:--</strong>
+            <p id="sidebarDate">Active Session</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Right Content Area -->
+    <div class="main-wrapper">
+      
+      <!-- Top Navigation Header -->
+      <header class="top-header">
+        <div class="top-brand-mobile">
+          <i class="fa-solid fa-brain"></i>
+          <span>SleepGuard Pro v11</span>
+        </div>
+
+        <div class="header-status-group">
+          <div class="status-pill yellow" id="camStatusPill">
+            <span class="pill-dot"></span> <span id="camStatusText">Camera: Not Connected 🔴</span>
+          </div>
+          <div class="status-pill yellow" id="aiStatusPill">
+            <span class="pill-dot"></span> <span id="aiStatusText">AI Engine: Loading...</span>
+          </div>
+          <div class="status-pill dim" id="protStatusPill">
+            <span class="pill-dot"></span> <span id="protStatusText">Protection: Disabled ⚪</span>
+          </div>
+        </div>
+
+        <div class="top-header-right">
+          <button class="header-btn btn-download-ext" id="downloadExtBtn"><i class="fa-solid fa-puzzle-piece"></i> Extension ZIP</button>
+          <button class="header-btn" id="headerSettingsBtn"><i class="fa-solid fa-gear"></i> Settings</button>
+          <button class="header-btn" id="headerLogsBtn"><i class="fa-solid fa-list"></i> Logs</button>
+          
+          <!-- Dynamic Action Button: Start / Pause / Resume Protection -->
+          <button class="btn-toggle-protection btn-start-style" id="toggleProtectionBtn">
+            <i class="fa-solid fa-play"></i> Start Protection
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Main Grid Layout -->
+      <main class="dashboard-content">
+        
+        <!-- Left Vision & Telemetry Column -->
+        <section class="left-vision-col" id="sectionDashboard">
+          
+          <!-- Live Camera Card -->
+          <div class="card camera-card">
+            <div class="card-title-bar">
+              <div class="title-left">
+                <i class="fa-solid fa-video"></i> Live Camera Feed <span class="chip-live" id="liveChip">STANDBY</span>
+              </div>
+              <button class="btn-chip" id="toggleFaceMeshBtn">Face Mesh Overlay Only: ON</button>
+            </div>
+
+            <!-- Video Viewport -->
+            <div class="video-container">
+              <video id="webcam" playsinline autoplay muted></video>
+              <canvas id="hudCanvas"></canvas>
+              
+              <div class="fps-badge">FPS: <span id="fpsVal">0</span></div>
+
+              <!-- Permission / Camera Prompt Overlay -->
+              <div class="camera-prompt-overlay" id="camPrompt">
+                <i class="fa-solid fa-camera prompt-icon"></i>
+                <h3>Camera Access Required</h3>
+                <p>AI will start tracking after camera permission is granted.</p>
+                <button class="btn-primary" id="startCamBtn">
+                  <i class="fa-solid fa-camera"></i> Enable Camera Access
+                </button>
+              </div>
+            </div>
+
+            <!-- Video Metrics Bar -->
+            <div class="video-metrics-bar">
+              <div class="metric-box">
+                <i class="fa-solid fa-face-smile metric-icon"></i>
+                <div class="metric-meta">
+                  <span class="metric-lbl">Face</span>
+                  <span class="metric-val text-yellow" id="metFaceVal">NO 🔴</span>
+                </div>
+              </div>
+              <div class="metric-box">
+                <i class="fa-solid fa-eye metric-icon"></i>
+                <div class="metric-meta">
+                  <span class="metric-lbl">Eyes</span>
+                  <span class="metric-val text-dim" id="metEyesVal">--</span>
+                </div>
+              </div>
+              <div class="metric-box">
+                <i class="fa-solid fa-wave-square metric-icon"></i>
+                <div class="metric-meta">
+                  <span class="metric-lbl">EAR</span>
+                  <span class="metric-val text-dim" id="metEarVal">--</span>
+                </div>
+              </div>
+              <div class="metric-box">
+                <i class="fa-solid fa-eye-low-vision metric-icon"></i>
+                <div class="metric-meta">
+                  <span class="metric-lbl">Blink Rate</span>
+                  <span class="metric-val"><strong id="metBlinkVal">--</strong> / min</span>
+                </div>
+              </div>
+              <div class="metric-box">
+                <i class="fa-solid fa-bed metric-icon"></i>
+                <div class="metric-meta">
+                  <span class="metric-lbl">Sleep Score</span>
+                  <span class="metric-val text-dim" id="metSleepScoreVal">0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real Status Card -->
+          <div class="card status-state-card warning" id="statusCard">
+            <div class="status-avatar-wrap" id="statusAvatarWrap">
+              <i class="fa-solid fa-video-slash status-avatar-icon text-dim" id="statusAvatarIcon"></i>
+            </div>
+            <div class="status-text-wrap">
+              <h3 id="statusHeadingText">Camera Offline</h3>
+              <p id="statusSubText">Click "Enable Camera Access" to initialize tracking.</p>
+            </div>
+            <div class="confidence-ring-wrap">
+              <svg class="ring-svg" viewBox="0 0 100 100">
+                <circle class="ring-bg" cx="50" cy="50" r="42"></circle>
+                <circle class="ring-fill" id="confRingFill" cx="50" cy="50" r="42"></circle>
+              </svg>
+              <div class="ring-text-center">
+                <span class="ring-lbl">Face Track</span>
+                <span class="ring-val" id="confValText">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- LIVE AI TELEMETRY Panel (Professional Clean Dashboard) -->
+          <div class="card real-detection-panel">
+            <div class="card-title-bar">
+              <div class="title-left"><i class="fa-solid fa-chart-simple"></i> LIVE AI TELEMETRY</div>
+            </div>
+            
+            <div class="real-telemetry-grid">
+              <div class="real-tel-box">
+                <span class="tel-lbl">Face Tracking</span>
+                <strong class="tel-val text-dim" id="telFaceStatus">Waiting</strong>
+              </div>
+              <div class="real-tel-box">
+                <span class="tel-lbl">Eye Tracking</span>
+                <strong class="tel-val text-dim" id="telEyeStatus">Waiting</strong>
+              </div>
+              <div class="real-tel-box">
+                <span class="tel-lbl">EAR Ratio</span>
+                <strong class="tel-val text-dim" id="telEarAvg">--</strong>
+              </div>
+              <div class="real-tel-box">
+                <span class="tel-lbl">Landmarks</span>
+                <strong class="tel-val text-dim" id="telLandmarks">0</strong>
+              </div>
+              <div class="real-tel-box" style="grid-column: span 4;">
+                <span class="tel-lbl">Tracking Speed</span>
+                <strong class="tel-val text-dim" id="telFps">--</strong>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- Right Controls & Sound Settings Column -->
+        <section class="right-controls-col">
+          
+          <!-- SMART PROTECTION Panel -->
+          <div class="card timer-panel-card" id="sectionTimer">
+            <div class="card-title-bar">
+              <div class="title-left"><i class="fa-solid fa-stopwatch"></i> SMART PROTECTION</div>
+              <span class="timer-pill yellow" id="timerPill">🟡 Camera Offline</span>
+            </div>
+
+            <!-- Timer 1: Sleep Emergency Timer (User Configurable HH:MM:SS) -->
+            <div class="timer-sub-box sleep-timer-box">
+              <div class="sub-timer-header">
+                <div class="sub-timer-title"><i class="fa-solid fa-bed text-red"></i> <strong>Sleep Emergency Detection</strong></div>
+                <span class="badge-status" id="sleepTimerBadge">STANDBY</span>
+              </div>
+              <div class="clock-display-row">
+                <span class="clock-num" id="sleepClockDisplay">00 : 00 : 10</span>
+              </div>
+
+              <!-- Custom Sleep Emergency HH:MM:SS Timer Setup -->
+              <div class="hms-custom-timer-container">
+                <span class="hms-lbl-title">Custom Sleep Action Timer:</span>
+                <div class="hms-spinner-row">
+                  <div class="spinner-box">
+                    <span class="spinner-sub-lbl">HH</span>
+                    <input type="number" id="inputSleepHours" min="0" max="23" value="0">
+                  </div>
+                  <span class="spinner-colon">:</span>
+                  <div class="spinner-box">
+                    <span class="spinner-sub-lbl">MM</span>
+                    <input type="number" id="inputSleepMins" min="0" max="59" value="0">
+                  </div>
+                  <span class="spinner-colon">:</span>
+                  <div class="spinner-box">
+                    <span class="spinner-sub-lbl">SS</span>
+                    <input type="number" id="inputSleepSecs" min="0" max="59" value="10">
+                  </div>
+                  <button class="btn-apply-time" id="applySleepTimeBtn"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+                </div>
+              </div>
+
+              <!-- Quick Sleep Presets -->
+              <div class="preset-chips-row">
+                <button class="preset-chip sleep-preset" data-sleepsecs="5">5s</button>
+                <button class="preset-chip active sleep-preset" data-sleepsecs="10">10s</button>
+                <button class="preset-chip sleep-preset" data-sleepsecs="20">20s</button>
+                <button class="preset-chip sleep-preset" data-sleepsecs="30">30s</button>
+                <button class="preset-chip sleep-preset" data-sleepsecs="60">1m</button>
+                <button class="preset-chip sleep-preset" data-sleepsecs="300">5m</button>
+              </div>
+
+              <!-- Sleep Timer Info Row -->
+              <div class="timer-info-row">
+                <span class="timer-info-item"><i class="fa-solid fa-eye-low-vision"></i> Eye closure confirm: <strong>2.5s</strong></span>
+                <span class="timer-info-item"><i class="fa-solid fa-bell"></i> Siren: <strong>Last 3 seconds</strong></span>
+              </div>
+            </div>
+
+            <!-- Timer 2: User Not Found / Absence Timer (Custom HH:MM:SS Timer) -->
+            <div class="timer-sub-box away-timer-box">
+              <div class="sub-timer-header">
+                <div class="sub-timer-title"><i class="fa-solid fa-user-slash text-yellow"></i> <strong>User Absence Detection</strong></div>
+                <span class="badge-status" id="awayTimerBadge">WAITING FOR CAMERA</span>
+              </div>
+              <div class="clock-display-row">
+                <span class="clock-num" id="awayClockDisplay">00 : 00 : 30</span>
+              </div>
+
+              <!-- Custom HH:MM:SS Timer Setup -->
+              <div class="hms-custom-timer-container">
+                <span class="hms-lbl-title">Custom User Not Found Timer:</span>
+                <div class="hms-spinner-row">
+                  <div class="spinner-box">
+                    <span class="spinner-sub-lbl">HH</span>
+                    <input type="number" id="inputHours" min="0" max="60" value="0">
+                  </div>
+                  <span class="spinner-colon">:</span>
+                  <div class="spinner-box">
+                    <span class="spinner-sub-lbl">MM</span>
+                    <input type="number" id="inputMins" min="0" max="59" value="0">
+                  </div>
+                  <span class="spinner-colon">:</span>
+                  <div class="spinner-box">
+                    <span class="spinner-sub-lbl">SS</span>
+                    <input type="number" id="inputSecs" min="0" max="59" value="30">
+                  </div>
+                  <button class="btn-apply-time" id="applyTimeBtn"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+                </div>
+              </div>
+
+              <!-- Quick Preset Chips -->
+              <div class="preset-chips-row">
+                <button class="preset-chip active" data-secs="30">30s</button>
+                <button class="preset-chip" data-secs="60">1m</button>
+                <button class="preset-chip" data-secs="300">5m</button>
+                <button class="preset-chip" data-secs="600">10m</button>
+                <button class="preset-chip" data-secs="1800">30m</button>
+                <button class="preset-chip" data-secs="3600">60m</button>
+              </div>
+            </div>
+
+            <div class="timer-note">
+              <i class="fa-solid fa-circle-info"></i> Both timers are fully user-configurable. Settings are saved automatically for next session.
+            </div>
+          </div>
+
+          <!-- Sound & Alarm Settings Panel -->
+          <div class="card sound-panel-card" id="sectionSound">
+            <div class="card-title-bar">
+              <div class="title-left"><i class="fa-solid fa-volume-high"></i> Alarm & Siren Settings</div>
+            </div>
+
+            <!-- Enable Alarm Switch -->
+            <div class="sound-setting-row">
+              <div class="setting-meta">
+                <i class="fa-solid fa-bell icon-sub text-green"></i>
+                <div>
+                  <strong>Enable Alarm Response</strong>
+                  <p>Execute response on trigger</p>
+                </div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="alarmToggleSwitch" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <!-- Siren ON / OFF Toggle Switch -->
+            <div class="sound-setting-row">
+              <div class="setting-meta">
+                <i class="fa-solid fa-bullhorn icon-sub text-cyan"></i>
+                <div>
+                  <strong>Siren Audio</strong>
+                  <p>Play siren sound (If OFF, close tabs silently)</p>
+                </div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="sirenToggleSwitch" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <!-- Volume Slider -->
+            <div class="sound-setting-row">
+              <div class="setting-meta">
+                <i class="fa-solid fa-volume-low icon-sub"></i>
+                <div>
+                  <strong>Volume</strong>
+                </div>
+              </div>
+              <div class="volume-slider-wrap">
+                <input type="range" id="volumeSlider" min="0" max="100" value="100">
+                <span class="vol-pct-text" id="volumeValText">100%</span>
+              </div>
+            </div>
+
+            <!-- Repeat / Warning Trigger Mode Select -->
+            <div class="sound-setting-row">
+              <div class="setting-meta">
+                <i class="fa-solid fa-rotate icon-sub"></i>
+                <div>
+                  <strong>Repeat / Trigger Mode</strong>
+                  <p>Siren warning timing</p>
+                </div>
+              </div>
+              <select id="repeatModeSelect" class="form-select">
+                <option value="last_3_sec">Last 3 Seconds Only</option>
+                <option value="until_awake">Until User Awake</option>
+                <option value="until_closed">Until Tabs Closed</option>
+              </select>
+            </div>
+
+            <!-- Sound Type Select -->
+            <div class="sound-setting-row">
+              <div class="setting-meta">
+                <i class="fa-solid fa-music icon-sub"></i>
+                <div>
+                  <strong>Sleep Warning Sound</strong>
+                  <p>Select siren tone</p>
+                </div>
+              </div>
+              <select id="soundTypeSelect" class="form-select">
+                <option value="siren">Security Alarm</option>
+                <option value="soft">Soft Warning</option>
+                <option value="cyber">Cyber Siren</option>
+                <option value="police">Police Beacon</option>
+              </select>
+            </div>
+
+            <!-- Stop Siren After Tabs Close -->
+            <div class="sound-setting-row">
+              <div class="setting-meta">
+                <i class="fa-solid fa-circle-stop icon-sub text-red"></i>
+                <div>
+                  <strong>Stop Siren After Tabs Close</strong>
+                  <p>Auto-silence alarm once protected tabs are closed</p>
+                </div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="stopSirenAfterCloseSwitch" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <button class="btn-test-alarm" id="testAlarmBtn">
+
+              <i class="fa-solid fa-play"></i> Test Alarm Siren
+            </button>
+          </div>
+
+          <!-- Protected Tabs Panel -->
+          <div class="card protected-tabs-panel" id="sectionTabs">
+            <div class="card-title-bar">
+              <div class="title-left"><i class="fa-solid fa-folder-open"></i> Protected Sites</div>
+              <button class="btn-link" id="manageTabsBtn">Manage Domains</button>
+            </div>
+
+            <div class="tabs-quick-list">
+              <div class="tab-item-row">
+                <div class="tab-meta"><i class="fa-brands fa-youtube icon-yt"></i> <span>YouTube</span></div>
+                <span class="tab-status-chip">Protected</span>
+                <label class="switch-small">
+                  <input type="checkbox" class="tab-domain-toggle" value="youtube.com" checked>
+                  <span class="slider-small"></span>
+                </label>
+              </div>
+
+              <div class="tab-item-row">
+                <div class="tab-meta"><i class="fa-brands fa-instagram icon-ig"></i> <span>Instagram</span></div>
+                <span class="tab-status-chip">Protected</span>
+                <label class="switch-small">
+                  <input type="checkbox" class="tab-domain-toggle" value="instagram.com" checked>
+                  <span class="slider-small"></span>
+                </label>
+              </div>
+
+              <div class="tab-item-row">
+                <div class="tab-meta"><i class="fa-solid fa-film icon-nf"></i> <span>Netflix</span></div>
+                <span class="tab-status-chip">Protected</span>
+                <label class="switch-small">
+                  <input type="checkbox" class="tab-domain-toggle" value="netflix.com" checked>
+                  <span class="slider-small"></span>
+                </label>
+              </div>
+
+              <div class="tab-item-row">
+                <div class="tab-meta"><i class="fa-solid fa-globe icon-all"></i> <span>All Other Tabs</span></div>
+                <span class="tab-status-chip">Protected</span>
+                <label class="switch-small">
+                  <input type="checkbox" id="toggleAllOtherTabsSwitch" checked>
+                  <span class="slider-small"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+      </main>
+
+      <!-- Bottom Banner Bar -->
+      <footer class="bottom-banner-bar">
+        <div class="banner-left">
+          <i class="fa-solid fa-shield-halved text-green"></i>
+          <span>SleepGuard Pro v11 — State-Driven Protection Engine</span>
+        </div>
+        <div class="banner-right">
+          <i class="fa-solid fa-puzzle-piece text-green"></i>
+          <span id="extensionStatusBanner">Extension: Checking...</span>
+          <button class="btn-link" id="footerDownloadBtn" style="margin-left: 8px; color: var(--accent-cyan); font-weight: bold;">[Download ZIP]</button>
+        </div>
+      </footer>
+
+    </div>
+
+  </div>
+
+  <!-- Modal 1: Manage Protected Domains Modal -->
+  <div class="modal-backdrop hidden" id="protectedTabsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-list-check"></i> Manage Protected Websites</h3>
+        <button class="modal-close" id="closeProtectedTabsBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Select which website tabs SleepGuard AI should close upon sleep or absence trigger.</p>
+        <div class="protected-list">
+          <label class="domain-checkbox"><input type="checkbox" class="protected-domain-check" value="youtube.com" checked> <i class="fa-brands fa-youtube icon-yt"></i> YouTube</label>
+          <label class="domain-checkbox"><input type="checkbox" class="protected-domain-check" value="instagram.com" checked> <i class="fa-brands fa-instagram icon-ig"></i> Instagram</label>
+          <label class="domain-checkbox"><input type="checkbox" class="protected-domain-check" value="netflix.com" checked> <i class="fa-solid fa-film icon-nf"></i> Netflix</label>
+          <label class="domain-checkbox"><input type="checkbox" class="protected-domain-check" value="twitch.tv" checked> <i class="fa-brands fa-twitch icon-tw"></i> Twitch</label>
+          <label class="domain-checkbox"><input type="checkbox" class="protected-domain-check" value="facebook.com" checked> <i class="fa-brands fa-facebook icon-fb"></i> Facebook</label>
+          <label class="domain-checkbox"><input type="checkbox" class="protected-domain-check" value="x.com" checked> <i class="fa-brands fa-x-twitter icon-x"></i> Twitter / X</label>
+        </div>
+        <div class="form-group">
+          <label for="customDomainInput">Custom Domain (Optional)</label>
+          <input type="text" id="customDomainInput" placeholder="e.g. reddit.com">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="saveProtectedTabsBtn">Save Domains</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Activity Logs Modal -->
+  <div class="modal-backdrop hidden" id="logsModal">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-list"></i> Activity Log Stream</h3>
+        <button class="modal-close" id="closeLogsBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="log-feed-large" id="timelineList">
+          <div class="log-entry"><span class="log-time">--:--:--</span> <span class="log-msg">SleepGuard Pro v11 Engine initialized.</span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="clearLogsBtn">Clear Logs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Settings Modal -->
+  <div class="modal-backdrop hidden" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-gear"></i> System Settings</h3>
+        <button class="modal-close" id="closeSettingsBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="drowsinessThreshold">EAR Eye Closure Threshold (<span id="thresholdValDisplay">0.22</span>)</label>
+          <input type="range" id="drowsinessThreshold" min="0.12" max="0.28" step="0.01" value="0.22">
+          <small class="form-hint">Values below this ratio register eyes as closed.</small>
+        </div>
+        <div class="form-group" style="margin-top: 14px;">
+          <label class="domain-checkbox" style="font-weight: 600;">
+            <input type="checkbox" id="instantSleepToggle" checked>
+            Instant Sleep Timer on Eye Closure (2.5s sleep confirmed)
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="saveSettingsBtn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: About Modal -->
+  <div class="modal-backdrop hidden" id="aboutModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-circle-info"></i> About SleepGuard Pro v11</h3>
+        <button class="modal-close" id="closeAboutBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>SleepGuard Pro v11 Engine</strong></p>
+        <p>100% Real-Time Client-side AI sleep protection powered by MediaPipe Face Mesh.</p>
+        <p>Features dual timers for configurable sleep emergency countdown and user absence countdowns with 3-second siren warnings.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="closeAboutFooterBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Fullscreen Emergency Countdown Overlay -->
+  <div class="fullscreen-overlay hidden" id="emergencyOverlay">
+    <div class="emergency-card">
+      <i class="fa-solid fa-triangle-exclamation emergency-icon"></i>
+      <h2 id="emergencyTitle">SLEEP DETECTED!</h2>
+      <p id="emergencySubtitle">Closing protected browser tabs in:</p>
+      <div class="countdown-display" id="emergencyCountdownNum">10</div>
+      <p class="emergency-help">Move mouse, press key, or OPEN EYES to CANCEL</p>
+      <button class="btn-danger" id="cancelEmergencyBtn">
+        <i class="fa-solid fa-xmark"></i> Cancel Action & Stop Alarm
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal 6: Download & Installation Modal -->
+  <div class="modal-backdrop hidden" id="downloadModal">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-puzzle-piece text-cyan"></i> SleepGuard Pro Extension v11.0.0</h3>
+        <button class="modal-close" id="closeDownloadBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">The Chrome Companion Extension runs in the background to automatically close protected tabs (YouTube, Instagram, Netflix) when sleep or absence is detected.</p>
+        
+        <div class="install-steps-box">
+          <div class="install-step">
+            <span class="step-num">1</span>
+            <div><strong>Download Latest Release ZIP</strong><p>Click below to download <code>SleepGuard-Pro-v11.0.0.zip</code> directly from GitHub Releases.</p></div>
+          </div>
+          <div class="install-step">
+            <span class="step-num">2</span>
+            <div><strong>Extract the ZIP File</strong><p>Unzip the downloaded archive to a folder on your computer.</p></div>
+          </div>
+          <div class="install-step">
+            <span class="step-num">3</span>
+            <div><strong>Open Chrome Extensions Page</strong><p>Navigate to <code>chrome://extensions</code> in your Chrome browser address bar.</p></div>
+          </div>
+          <div class="install-step">
+            <span class="step-num">4</span>
+            <div><strong>Load Unpacked Extension</strong><p>Enable <strong>Developer Mode</strong> (top-right toggle), click <strong>Load Unpacked</strong>, and select the extracted folder.</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between; align-items: center;">
+        <span class="v10-badge" style="font-size: 0.8rem;">Latest Tag: v11.0.0</span>
+        <a href="https://github.com/CyberDrivePro/SleepGuard-AI-Browser-Protector/releases/latest" target="_blank" class="btn-primary" id="directDownloadLink" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-download"></i> Download Extension ZIP
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic Script -->
+  <script src="app.js"></script>
+</body>
+</html>

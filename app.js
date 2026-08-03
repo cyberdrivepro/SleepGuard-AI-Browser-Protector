@@ -173,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Advanced Protection Settings
     closeSleepGuardPage: true,   // Close this SleepGuard monitoring tab after action
-    selfCloseDelaySecs: 2,       // Delay in seconds before closing SleepGuard tab
     closeAllWindows: false,       // Close entire browser windows containing protected tabs
     advPlaySiren: true,           // Play siren before closing
     advShowCountdown: true,       // Show 3-second countdown overlay
@@ -480,13 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (state.protectionActive) {
       state.protectionActive = false;
       state.currentState = 'PROT_PAUSED';
-      state.sleepTimerActive = false;
-      state.absenceTimerActive = false;
-      state.sleepTimerRemainingSecs = state.sleepTimerDurationSecs;
-      state.absenceTimerRemainingSecs = state.absenceTimerDurationSecs;
       alarmEngine.stopAlarm();
-      updateSleepClockDisplay();
-      updateAwayClockDisplay();
       addTimelineLog('Protection manually paused by user.');
       updateHeaderAndProtectionState();
     } else {
@@ -499,28 +492,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Trigger Protection (Core Extension & Alarm Action) ---
   function triggerProtection(reason) {
-    if (!state.protectionActive || !state.cameraActive || state.emergencyActive) {
-      console.log(`[SleepGuard] triggerProtection blocked (protectionActive=${state.protectionActive}, cameraActive=${state.cameraActive}, emergencyActive=${state.emergencyActive})`);
-      return;
-    }
+    if (state.emergencyActive) return;
     state.emergencyActive = true;
     state.emergencyReason = reason;
 
     addTimelineLog(`🚨 Protection Triggered: ${reason}`);
 
     // Play Siren Audio if enabled
-    if (state.alarmEnabled && state.sirenEnabled && state.advPlaySiren) {
+    if (state.alarmEnabled && state.sirenEnabled) {
       alarmEngine.startAlarm();
     }
 
-    if (state.advShowCountdown) {
-      emergencyTitle.textContent = reason.toUpperCase();
-      emergencySubtitle.textContent = 'Closing protected browser tabs in:';
-      emergencyCountdownNum.textContent = '0';
-      emergencyOverlay.classList.remove('hidden');
-    } else {
-      emergencyOverlay.classList.add('hidden');
-    }
+    emergencyTitle.textContent = reason.toUpperCase();
+    emergencySubtitle.textContent = 'Closing protected browser tabs in:';
+    emergencyCountdownNum.textContent = '0';
+    emergencyOverlay.classList.remove('hidden');
 
     // Dispatch Tab Close Signal to Chrome Extension
     executeBrowserCloseAction();
@@ -544,38 +530,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Extension Bridge Check (Real Heartbeat Ping-Pong) ---
-  let lastExtensionPongTime = 0;
-
+  // --- Extension Bridge Check ---
   function checkExtensionBridge() {
     window.postMessage({ source: 'SLEEPGUARD_WEB_APP', type: 'SLEEPGUARD_PING' }, '*');
-
-    const now = Date.now();
-    if (lastExtensionPongTime > 0 && (now - lastExtensionPongTime) > 6000) {
-      if (state.extensionConnected) {
-        state.extensionConnected = false;
-        if (extensionStatusBanner) {
-          extensionStatusBanner.textContent = 'Extension: Not Connected 🔴 (Refresh F5)';
-          extensionStatusBanner.style.color = 'var(--color-red)';
-        }
-        addTimelineLog('🔴 Extension Heartbeat Lost — Please refresh page (F5) after loading extension.');
-      }
-    }
   }
 
   window.addEventListener('message', (evt) => {
     if (evt.data && evt.data.type === 'SLEEPGUARD_PONG') {
-      lastExtensionPongTime = Date.now();
       if (!state.extensionConnected) {
         state.extensionConnected = true;
         if (extensionStatusBanner) {
           extensionStatusBanner.textContent = 'Extension: Connected 🟢';
-          extensionStatusBanner.style.color = 'var(--color-green)';
+          extensionStatusBanner.className = 'text-green';
         }
         addTimelineLog('Chrome Extension Connected 🟢');
       }
     }
-
 
     // Extension signals tabs have been closed -> auto-stop siren
     if (evt.data && evt.data.type === 'SLEEPGUARD_TABS_CLOSED') {
@@ -1098,19 +1068,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const saved = JSON.parse(localStorage.getItem('sg_advProtection'));
       if (!saved) return;
       if (saved.closeSleepGuardPage !== undefined) state.closeSleepGuardPage = saved.closeSleepGuardPage;
-      if (saved.selfCloseDelaySecs !== undefined) state.selfCloseDelaySecs = parseInt(saved.selfCloseDelaySecs) || 2;
       if (saved.closeAllWindows !== undefined) state.closeAllWindows = saved.closeAllWindows;
       if (saved.advPlaySiren !== undefined) state.advPlaySiren = saved.advPlaySiren;
       if (saved.advShowCountdown !== undefined) state.advShowCountdown = saved.advShowCountdown;
       if (Array.isArray(saved.customDomains)) state.customDomains = saved.customDomains;
       // Sync toggles
       const csp = document.getElementById('closeSleepGuardPageToggle');
-      const scd = document.getElementById('selfCloseDelaySelect');
       const caw = document.getElementById('closeAllWindowsToggle');
       const aps = document.getElementById('advPlaySirenToggle');
       const asc = document.getElementById('advShowCountdownToggle');
       if (csp) csp.checked = state.closeSleepGuardPage;
-      if (scd) scd.value = String(state.selfCloseDelaySecs);
       if (caw) caw.checked = state.closeAllWindows;
       if (aps) aps.checked = state.advPlaySiren;
       if (asc) asc.checked = state.advShowCountdown;
@@ -1262,25 +1229,21 @@ document.addEventListener('DOMContentLoaded', () => {
         actionScope: state.closeAllWindows ? 'window' : 'protected',
         protectedDomains: allDomains,
         protectAllOtherTabs: state.protectAllOtherTabs,
-        closeSleepGuardPage: state.closeSleepGuardPage,
-        selfCloseDelaySecs: state.selfCloseDelaySecs || 2
+        closeSleepGuardPage: state.closeSleepGuardPage
       }, '*');
       addTimelineLog('Protected Tabs close command sent to Chrome Extension. 🛑');
-      if (state.closeSleepGuardPage) {
-        addTimelineLog(`🔒 Self-Protection: SleepGuard monitoring tab will be closed after ${state.selfCloseDelaySecs || 2}s delay.`);
-      }
+      if (state.closeSleepGuardPage) addTimelineLog('🔒 Self-Protection: SleepGuard monitoring tab will be closed.');
 
-      // Fallback: if extension doesn't confirm within fallback time, stop siren anyway
-      const fallbackMs = ((state.selfCloseDelaySecs || 2) + 3) * 1000;
+      // Fallback: if extension doesn't confirm within 3s, stop siren anyway
       if (state.stopSirenAfterClose) {
         setTimeout(() => {
           if (alarmEngine.isPlaying) {
             alarmEngine.stopAlarm();
-            addTimelineLog('🔇 Siren auto-stopped (fallback after tab close).');
+            addTimelineLog('🔇 Siren auto-stopped (3s fallback after tab close).');
           }
           state.emergencyActive = false;
           updateHeaderAndProtectionState();
-        }, fallbackMs);
+        }, 3000);
       }
     } else {
       // No extension — stop siren immediately after showing alert
@@ -1438,21 +1401,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
-  // FORCE CLOSE TABS NOW BUTTON (Instant Manual Trigger)
+  // TEST PROTECTED SITES BUTTON
   // =========================================================================
-  const forceCloseTabsBtn = document.getElementById('forceCloseTabsBtn');
-  if (forceCloseTabsBtn) {
-    forceCloseTabsBtn.addEventListener('click', () => {
-      addTimelineLog('⚡ Manual "Close Tabs Now" triggered by user.');
-      rebuildProtectedDomains();
-      executeBrowserCloseAction();
-    });
-  }
-
-  // =========================================================================
-  // TEST PROTECTED SITES BUTTON (Dry Run)
-  // =========================================================================
-
   const testProtectedBtn = document.getElementById('testProtectedBtn');
   if (testProtectedBtn) {
     testProtectedBtn.addEventListener('click', () => {
@@ -1611,9 +1561,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateDomainChip(chipMap[cb.value], cb.checked);
     });
 
-    const scdSelect = document.getElementById('selfCloseDelaySelect');
     state.closeSleepGuardPage = closeSleepGuardPageToggle ? closeSleepGuardPageToggle.checked : true;
-    state.selfCloseDelaySecs = scdSelect ? parseInt(scdSelect.value) || 2 : 2;
     state.closeAllWindows = closeAllWindowsToggle ? closeAllWindowsToggle.checked : false;
     state.advPlaySiren = advPlaySirenToggle ? advPlaySirenToggle.checked : true;
     state.advShowCountdown = advShowCountdownToggle ? advShowCountdownToggle.checked : true;
@@ -1626,7 +1574,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
     localStorage.setItem('sg_advProtection', JSON.stringify({
       closeSleepGuardPage: state.closeSleepGuardPage,
-      selfCloseDelaySecs: state.selfCloseDelaySecs,
       closeAllWindows: state.closeAllWindows,
       advPlaySiren: state.advPlaySiren,
       advShowCountdown: state.advShowCountdown,
@@ -1635,7 +1582,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     protectedTabsModal.classList.add('hidden');
     const totalDomains = state.protectedDomains.length;
-    addTimelineLog(`✅ Protection Settings saved — ${totalDomains} domain(s)${state.closeSleepGuardPage ? `, Self-Close ON (${state.selfCloseDelaySecs}s delay)` : ''}${state.closeAllWindows ? ', Window-Close ON' : ''}.`);
+    addTimelineLog(`✅ Protection Settings saved — ${totalDomains} domain(s)${state.closeSleepGuardPage ? ', Self-Close ON' : ''}${state.closeAllWindows ? ', Window-Close ON' : ''}.`);
   });
 
   headerLogsBtn.addEventListener('click', () => logsModal.classList.remove('hidden'));
